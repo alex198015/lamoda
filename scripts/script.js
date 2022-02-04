@@ -1,6 +1,7 @@
 const headerCityButton = document.querySelector('.header__city-button')
 const subheaderCart = document.querySelector('.subheader__cart')
 const cartOverlay = document.querySelector('.cart-overlay')
+const cartListGoods = document.querySelector('.cart__list-goods')
 
 headerCityButton.textContent = localStorage.getItem('lomoda-location') || 'Какой у Вас город ?'
 
@@ -9,12 +10,54 @@ let hash = location.hash.substring(1)
 const cartModalOpen = () => {
     cartOverlay.classList.add('cart-overlay-open')
     disableScroll()
+    renderCart()
 }
 
 const cartModalClose = () => {
     cartOverlay.classList.remove('cart-overlay-open')
     enableScroll()
 }
+
+const getLocalStorage = () => JSON?.parse(localStorage.getItem('cart-lomoda')) || []
+const setLocalStorage = (data) => localStorage.setItem('cart-lomoda', JSON.stringify(data))
+
+const renderCart = () => {
+    cartListGoods.textContent = ''
+    const cartItems = getLocalStorage()
+
+    let totalPrice = 0
+    
+    cartItems.forEach(({id, brand, cost, name, color, size}, i) => {
+        console.log(brand);
+        const tr = document.createElement('tr')
+        tr.innerHTML = `
+
+            <td>${i + 1}</td>
+            <td>${brand} ${name}</td>
+            ${color ? `<td>${color}</td>`: '<td>-</td>'}
+            ${size ? `<td>${size}</td>`: '<td>-</td>'}
+            <td>${cost} &#8381;</td>
+            <td><button class="btn-delete" data-id="${id}">&times;</button></td>
+         `
+         totalPrice += cost
+         cartListGoods.append(tr)
+    })
+    document.querySelector('.cart__total-cost').textContent = totalPrice + ' ₽'
+}
+
+const deleteItemCart = (id) => {
+    const cartItems = getLocalStorage()
+    const newCartItems = cartItems.filter(item => item.id !== id)
+    setLocalStorage(newCartItems)
+}
+
+cartListGoods.addEventListener('click', (e) => {
+    const target = e.target
+    if (target.closest('.btn-delete')) {
+        deleteItemCart(target.dataset.id)
+        renderCart()
+    }
+})
 
 const disableScroll = () => {
     const widthScroll = window.innerWidth - document.body.offsetWidth
@@ -180,7 +223,9 @@ try {
 
         generateList = data => data.reduce((html, item, i) => html + `<li class="card-good__select-item" data-id="${i}">${item}</li>`, '')
 
-        const renderCardGood = ([{brand, cost, name, color, sizes, photo}]) => {
+        const renderCardGood = ([{id, brand, cost, name, color, sizes, photo}]) => {
+
+            const data = {id, brand, cost, name}
             
             cardGoodImage.src = `goods-image/${photo}`
             cardGoodImage.alt = `${brand} ${name}`
@@ -202,6 +247,30 @@ try {
             } else {
                 cardGoodSizes.style.display = 'none'
             }
+            if(getLocalStorage().some(item => item.id === id)) {
+                cardGoodBuy.classList.add('delete')
+                cardGoodBuy.textContent = 'Удалить из корзины'
+
+            }
+
+            cardGoodBuy.addEventListener('click', () => {
+                if(cardGoodBuy.classList.contains('delete')) {
+                    deleteItemCart(id)
+                    cardGoodBuy.classList.remove('delete')
+                    cardGoodBuy.textContent = 'Добавить в корзину'
+                    return
+                }
+                if (color) data.color = cardGoodColor.textContent
+                if (sizes) data.size = cardGoodSizes.textContent
+
+
+                cardGoodBuy.classList.add('delete')
+                cardGoodBuy.textContent = 'Удалить из корзины'
+
+                const cardData = getLocalStorage()
+                cardData.push(data)
+                setLocalStorage(cardData)
+            })
 
            
         }
